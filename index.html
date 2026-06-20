@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="es-MX" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WPDM - Archivo Clandestino</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <style>
+        :root {
+            --bg: #121212;
+            --sb-bg: #1a1a1a;
+            --nav-bg: #222222;
+            --card: #1e1e1e;
+            --brd: #333333;
+            --red: #cc0000;
+            --red-hov: #ff1a1a;
+            --txt: #cccccc;
+            --txt-mut: #777777;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--txt); overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        
+        header { height: 50px; background: var(--nav-bg); border-bottom: 1px solid var(--brd); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 10; }
+        .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .brand img { height: 32px; width: 32px; border-radius: 2px; object-fit: cover; }
+        .brand span { color: #fff; font-weight: bold; font-size: 18px; letter-spacing: 0.5px; text-transform: uppercase; }
+        
+        .search-wrap { flex: 1; max-width: 400px; margin: 0 20px; }
+        .search-wrap input { width: 100%; background: #111; border: 1px solid var(--brd); padding: 6px 12px; color: #fff; outline: none; font-size: 13px; }
+        .search-wrap input:focus { border-color: var(--txt-mut); }
+        
+        .u-actions { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+        .btn { background: var(--red); color: #fff; border: 1px solid #880000; padding: 6px 12px; cursor: pointer; font-weight: bold; font-size: 12px; text-transform: uppercase; }
+        .btn:hover { background: var(--red-hov); }
+        .btn:disabled { background: #555; border-color: #333; cursor: not-allowed; }
+        .btn-ghost { background: transparent; border: 1px solid var(--brd); color: var(--txt); }
+        .btn-ghost:hover { background: #333; color: #fff; }
+        
+        .layout { display: flex; flex: 1; overflow: hidden; position: relative; }
+        
+        aside { width: 220px; background: var(--sb-bg); border-right: 1px solid var(--brd); display: flex; flex-direction: column; overflow-y: auto; padding: 15px 0; }
+        .cat-list { list-style: none; display: flex; flex-direction: column; }
+        .cat-item { padding: 10px 20px; cursor: pointer; color: var(--txt); font-weight: bold; font-size: 13px; transition: 0.1s; border-left: 3px solid transparent; }
+        .cat-item:hover { background: #2a2a2a; color: #fff; }
+        .cat-item.act { border-left: 3px solid var(--red); background: var(--card); color: #fff; }
+
+        main { flex: 1; overflow-y: auto; padding: 20px; }
+
+        .wpd-banner {
+            background-color: #1a1a1a;
+            background-image: linear-gradient(335deg, rgba(255,255,255,0.05) 25%, transparent 25%),
+                              linear-gradient(155deg, rgba(255,255,255,0.05) 25%, transparent 25%),
+                              linear-gradient(335deg, rgba(255,255,255,0.05) 25%, transparent 25%),
+                              linear-gradient(155deg, rgba(255,255,255,0.05) 25%, transparent 25%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px, 10px 10px, 0 0;
+            border: 2px solid var(--brd);
+            margin-bottom: 20px;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+        .wpd-banner h2 {
+            color: #ff8888;
+            font-family: "Impact", sans-serif;
+            font-size: 32px;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px #000;
+            margin: 5px 0;
+            -webkit-text-stroke: 1px #800000;
+        }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; }
+        
+        .v-card { background: var(--card); border: 1px solid var(--brd); display: flex; flex-direction: column; cursor: pointer; transition: border 0.2s; }
+        .v-card:hover { border-color: var(--txt-mut); }
+        .v-thumb { width: 100%; aspect-ratio: 16/9; background: #000; position: relative; border-bottom: 1px solid var(--brd); pointer-events: none; }
+        .v-thumb video { width: 100%; height: 100%; object-fit: contain; }
+        .v-info { padding: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .v-title { font-size: 13px; font-weight: bold; color: #eee; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .v-meta { font-size: 11px; color: var(--txt-mut); display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }
+        
+        .v-badge { padding: 2px 4px; font-size: 9px; color: #fff; font-weight: bold; text-transform: uppercase; border: 1px solid #444; border-radius: 2px; }
+        .b-admin { background: #800000; border-color: #ff0000; }
+        .b-mod { background: #004080; border-color: #0080ff; }
+        .b-owner { background: #806000; border-color: #ffc000; color: #fff; }
+        .b-miembro { background: #333; border-color: #555; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal-c { background: var(--sb-bg); border: 1px solid var(--red); width: 400px; padding: 20px; box-shadow: 0 0 15px rgba(204,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        
+        .modal-post { width: 800px; max-width: 95vw; display: flex; flex-direction: column; }
+        .modal-post h3 { color: #fff; font-size: 18px; border-bottom: none; margin-bottom: 10px; text-transform: none; }
+        .post-vid { width: 100%; background: #000; border: 1px solid var(--brd); max-height: 50vh; outline: none; margin-bottom: 10px; }
+        
+        .comment-section { background: #111; border: 1px solid var(--brd); padding: 10px; min-height: 100px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; max-height: 250px; overflow-y: auto; }
+        .comment { border-bottom: 1px solid #222; padding-bottom: 8px; }
+        .comment:last-child { border-bottom: none; }
+        .c-head { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+        .c-body { font-size: 13px; color: #ddd; word-wrap: break-word; }
+        .c-input-area { display: flex; gap: 10px; }
+
+        .modal-c h3 { margin-bottom: 15px; color: var(--red); font-size: 16px; text-transform: uppercase; border-bottom: 1px solid var(--brd); padding-bottom: 5px; }
+        .grp { margin-bottom: 15px; }
+        .grp label { display: block; font-size: 11px; color: var(--txt-mut); margin-bottom: 4px; text-transform: uppercase; }
+        .grp input[type="text"], .grp input[type="password"], .grp select { width: 100%; background: #000; border: 1px solid var(--brd); padding: 8px; color: #fff; font-size: 13px; }
+        .grp input:focus, .grp select:focus { outline: none; border-color: var(--red); }
+        .grp input[type="file"] { width: 100%; color: #fff; font-size: 12px; background: #111; padding: 8px; border: 1px dashed var(--brd); }
+        
+        .hidden { display: none !important; }
+        .del-btn { color: var(--txt-mut); background: none; border: none; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .del-btn:hover { color: var(--red-hov); text-decoration: underline; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: #444; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--red); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="#" class="brand">
+            <img src="marseydylan.webp" alt="WPDM">
+            <span>WPDM</span>
+        </a>
+        <div class="search-wrap">
+            <input type="text" placeholder="Buscar desmadre...">
+        </div>
+        <div class="u-actions" id="authZone">
+            <button class="btn btn-ghost" onclick="openMod('mAuth')">Entrar</button>
+            <button class="btn" onclick="openMod('mReg')">Sacar Cuenta</button>
+        </div>
+        <div class="u-actions hidden" id="usrZone">
+            <span id="uName" style="color:var(--txt-mut);font-weight:bold;"></span>
+            <button class="btn" onclick="openMod('mUp')">Trepar Video</button>
+            <button class="btn btn-ghost" onclick="logOut()">Zafarse</button>
+            <button class="btn btn-ghost hidden" id="btnAdm" onclick="openMod('mAdm')" style="border-color:var(--red);color:var(--red);">Patrón</button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside>
+            <ul class="cat-list">
+                <li class="cat-item act" onclick="setCat('all', this)">Todo el desmadre</li>
+                <li class="cat-item" onclick="setCat('accidents', this)">Accidentes pesados</li>
+                <li class="cat-item" onclick="setCat('cartel', this)">Narcos / Militares</li>
+                <li class="cat-item" onclick="setCat('fights', this)">Tiros / Peleas</li>
+                <li class="cat-item" onclick="setCat('cctv', this)">Cámaras (CCTV)</li>
+            </ul>
+        </aside>
+
+        <main>
+            <div class="wpd-banner">
+                <h2>YOU'RE VIEWING A CACHED VERSION</h2>
+                <h2 style="color: #fff;">LOGIN OR SIGN UP FOR LIVE VIEWING</h2>
+            </div>
+
+            <div class="grid" id="feed"></div>
+        </main>
+    </div>
+
+    <div class="modal" id="mAuth">
+        <div class="modal-c">
+            <h3>Caile a tu cuenta</h3>
+            <div class="grp"><label>Usuario</label><input type="text" id="lU" autocomplete="off"></div>
+            <div class="grp"><label>Contraseña</label><input type="password" id="lP"></div>
+            <button class="btn" style="width:100%" onclick="doLog(0)">Sobres (Entrar)</button>
+            <button class="btn btn-ghost" style="width:100%; margin-top:10px" onclick="closeMod()">Al rato</button>
+        </div>
+    </div>
+
+    <div class="modal" id="mReg">
+        <div class="modal-c">
+            <h3>Saca tu cuenta</h3>
+            <div class="grp"><label>¿Cómo te vas a llamar?</label><input type="text" id="rU" autocomplete="off"></div>
+            <div class="grp"><label>Contraseña</label><input type="password" id="rP"></div>
+            <button class="btn" style="width:100%" onclick="doLog(1)">Registrarse</button>
+            <button class="btn btn-ghost" style="width:100%; margin-top:10px" onclick="closeMod()">Al rato</button>
+        </div>
+    </div>
+
+    <div class="modal" id="mUp">
+        <div class="modal-c">
+            <h3>Trepar material</h3>
+            <div class="grp">
+                <label>¿En dónde va?</label>
+                <select id="uCat">
+                    <option value="all">General</option>
+                    <option value="accidents">Accidentes pesados</option>
+                    <option value="cartel">Narcos / Militares</option>
+                    <option value="fights">Tiros / Peleas</option>
+                    <option value="cctv">Cámaras (CCTV)</option>
+                </select>
+            </div>
+            <div class="grp">
+                <label>¿Qué pasó en el video?</label>
+                <input type="text" id="uT" autocomplete="off">
+            </div>
+            <div class="grp">
+                <label>Sube tu archivo (MP4/WEBM)</label>
+                <input type="file" id="uFile" accept="video/mp4,video/webm">
+            </div>
+            <button class="btn" id="btnSubir" style="width:100%" onclick="pushVid()">Subir Video</button>
+            <button class="btn btn-ghost" style="width:100%; margin-top:10px" onclick="closeMod()">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal" id="mAdm">
+        <div class="modal-c">
+            <h3>Manejo de raza</h3>
+            <div class="grp"><label>Nombre del wey</label><input type="text" id="aU" autocomplete="off"></div>
+            <div class="grp">
+                <label>¿Qué rango le vas a dar?</label>
+                <select id="aR">
+                    <option value="mod">MOD (Moderador)</option>
+                    <option value="admin">ADMIN (Administrador)</option>
+                    <option value="miembro">USER (Usuario normal)</option>
+                </select>
+            </div>
+            <button class="btn" style="width:100%" onclick="setRole()">Darle el puesto</button>
+            <button class="btn btn-ghost" style="width:100%; margin-top:10px" onclick="closeMod()">Cerrar</button>
+        </div>
+    </div>
+
+    <div class="modal" id="mPost">
+        <div class="modal-c modal-post">
+            <h3 id="vpTitle">Título del Post</h3>
+            <div style="font-size: 11px; color: var(--txt-mut); margin-bottom: 10px;" id="vpMeta">Por: Usuario</div>
+            <video class="post-vid" id="vpVideo" controls autoplay></video>
+            <div style="margin-top: 10px;">
+                <label style="color: var(--txt-mut); font-size: 11px; text-transform: uppercase;">La raza opina:</label>
+                <div class="comment-section" id="vpComments"></div>
+            </div>
+            <div class="c-input-area" id="vpCommentBox">
+                <input type="text" id="cInput" style="flex:1; background:#000; border:1px solid var(--brd); color:#fff; padding:8px; outline:none;" placeholder="Tira tu comentario aquí...">
+                <button class="btn" onclick="sendComment()">Comentar</button>
+            </div>
+            <div id="vpGuestMsg" style="color:var(--red); font-size: 12px; text-align:center; padding: 10px; display: none;">Entra a tu cuenta para tirar hate.</div>
+            <button class="btn btn-ghost" style="width:100%; margin-top:15px" onclick="closePost()">Cerrar Video</button>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN OFICIAL DE TU PROYECTO
+        const _f = {
+            apiKey: "AIzaSyCYQSsnI_O2K09R6l28EH_qfapPyvoLH_A",
+            authDomain: "wpdm-da948.firebaseapp.com",
+            databaseURL: "https://wpdm-da948-default-rtdb.firebaseio.com",
+            projectId: "wpdm-da948",
+            storageBucket: "wpdm-da948.firebasestorage.app",
+            messagingSenderId: "937496232090",
+            appId: "1:937496232090:web:a2f5b4d62add11c6a19f23"
+        };
+        
+        firebase.initializeApp(_f);
+        const db = firebase.database();
+        const storage = firebase.storage();
+        
+        let _u = null;
+        let _c = 'all';
+        let _currentPostId = null;
+        let _postsCache = {}; 
+        let _commentListener = null;
+
+        function openMod(id) {
+            document.querySelectorAll('.modal').forEach(m => {
+                m.style.display = 'none';
+                if(m.id === 'mPost') {
+                    const v = document.getElementById('vpVideo');
+                    if(v) v.pause();
+                }
+            });
+            const target = document.getElementById(id);
+            if(target) target.style.display = 'flex';
+        }
+
+        function closeMod() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function closePost() {
+            const v = document.getElementById('vpVideo');
+            if(v) { v.pause(); v.src = ''; }
+            if(_commentListener && _currentPostId) db.ref('posts/'+_currentPostId+'/comments').off('value', _commentListener);
+            closeMod();
+        }
+
+        function doLog(isReg) {
+            const u = document.getElementById(isReg ? 'rU' : 'lU').value.trim();
+            const p = document.getElementById(isReg ? 'rP' : 'lP').value.trim();
+            if(!u || !p) return;
+
+            db.ref('usrs/'+u).once('value', s => {
+                if(isReg) {
+                    if(s.exists()) return alert("Ese nombre ya lo agarraron, wey.");
+                    db.ref('usrs').once('value', s2 => {
+                        let r = s2.exists() ? 'miembro' : 'owner';
+                        db.ref('usrs/'+u).set({ u:u, p:btoa(p), r:r }, e => {
+                            if(!e) initSess(u, r);
+                        });
+                    });
+                } else {
+                    if(s.exists() && atob(s.val().p) === p) initSess(u, s.val().r);
+                    else alert("Nel, contraseña o usuario equivocados.");
+                }
+            });
+        }
+
+        function initSess(u, r) {
+            _u = { id: u, lvl: r };
+            document.getElementById('authZone').classList.add('hidden');
+            document.getElementById('usrZone').classList.remove('hidden');
+            document.getElementById('uName').innerText = u;
+            if(['admin','owner'].includes(r)) document.getElementById('btnAdm').classList.remove('hidden');
+            else document.getElementById('btnAdm').classList.add('hidden');
+            closeMod();
+            renderFeed();
+        }
+
+        function logOut() {
+            _u = null;
+            document.getElementById('authZone').classList.remove('hidden');
+            document.getElementById('usrZone').classList.add('hidden');
+            document.getElementById('btnAdm').classList.add('hidden');
+            ['lU','lP','rU','rP'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
+            renderFeed();
+        }
+
+        function pushVid() {
+            if(!_u) return;
+            const t = document.getElementById('uT').value.trim();
+            const c = document.getElementById('uCat').value;
+            const btn = document.getElementById('btnSubir');
+            const fileInput = document.getElementById('uFile');
+            const file = fileInput ? fileInput.files[0] : null;
+            
+            if(!t || !file) return alert("Llena el título y escoge un video, no la cagues.");
+
+            btn.innerText = "Subiendo... aguanta";
+            btn.disabled = true;
+
+            const storageRef = storage.ref('videos/' + Date.now() + '_' + file.name);
+            const uploadTask = storageRef.put(file);
+
+            uploadTask.on('state_changed', null, (err) => {
+                alert("Pedos al subir el video.");
+                btn.innerText = "Subir Video";
+                btn.disabled = false;
+            }, () => {
+                uploadTask.snapshot.ref.getDownloadURL().then((url) => {
+                    const r = db.ref('posts').push();
+                    r.set({
+                        id: r.key, t: t, v: url, c: c,
+                        by: _u.id, lvl: _u.lvl, ts: firebase.database.ServerValue.TIMESTAMP
+                    }, e => {
+                        if(!e) {
+                            document.getElementById('uT').value = '';
+                            document.getElementById('uFile').value = '';
+                            closeMod();
+                        }
+                        btn.innerText = "Subir Video";
+                        btn.disabled = false;
+                    });
+                });
+            });
+        }
+
+        function delVid(id) {
+            if(window.event) window.event.stopPropagation();
+            if(_u && ['admin','owner','mod'].includes(_u.lvl)) {
+                if(confirm('¿Seguro que quieres darle aire a este video con todo y comentarios?')) {
+                    db.ref('posts/'+id).remove();
+                }
+            }
+        }
+
+        function setRole() {
+            if(!_u || !['admin','owner'].includes(_u.lvl)) return;
+            const t = document.getElementById('aU').value.trim();
+            const r = document.getElementById('aR').value;
+            if(!t) return;
+
+            db.ref('usrs/'+t).once('value', s => {
+                if(!s.exists()) return alert("No topamos a ese wey aquí.");
+                if(s.val().r === 'owner') return alert("A este wey no lo puedes tocar.");
+                db.ref('usrs/'+t+'/r').set(r, e => {
+                    if(!e) { alert("Listo."); closeMod(); }
+                });
+            });
+        }
+
+        function setCat(cat, el) {
+            _c = cat;
+            document.querySelectorAll('.cat-item').forEach(i => i.classList.remove('act'));
+            if(el) el.classList.add('act');
+            renderFeed();
+        }
+
+        function loadFeed() {
+            db.ref('posts').orderByChild('ts').on('value', snap => {
+                _postsCache = {};
+                if(snap.exists()) {
+                    snap.forEach(x => { _postsCache[x.key] = x.val(); });
+                }
+                renderFeed();
+            }, (error) => {
+                console.error("Error cargando posts:", error);
+                renderFeed(); 
+            });
+        }
+
+        function renderFeed() {
+            const fd = document.getElementById('feed');
+            if(!fd) return;
+            fd.innerHTML = '';
+            
+            let arr = Object.values(_postsCache).filter(d => d && (_c === 'all' || d.c === _c));
+            arr.reverse();
+
+            if(arr.length === 0) {
+                fd.innerHTML = '<div style="color:#555; padding:20px; text-align:center; grid-column: 1/-1;">Aún no hay videos. ¡Saca una cuenta y sube el primero!</div>';
+                return;
+            }
+
+            arr.forEach(i => {
+                if(!i) return;
+                let btn = '';
+                if(_u && ['admin','owner','mod'].includes(_u.lvl)) {
+                    btn = `<button class="del-btn" onclick="delVid('${i.id}')">[BORRAR POST]</button>`;
+                }
+                fd.innerHTML += `
+                    <div class="v-card" onclick="openPost('${i.id}')">
+                        <div class="v-thumb">
+                            <video preload="none"><source src="${sec(i.v)}"></video>
+                        </div>
+                        <div class="v-info">
+                            <div class="v-title">${sec(i.t)}</div>
+                            <div class="v-meta">
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <span style="color:#bbb">${sec(i.by)}</span>
+                                    <span class="v-badge b-${i.lvl || 'miembro'}">${i.lvl || 'miembro'}</span>
+                                </div>
+                                <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 10px;">Ver post</button>
+                                ${btn}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openPost(id) {
+            const post = _postsCache[id];
+            if(!post) return;
+            _currentPostId = id;
+            document.getElementById('vpTitle').innerText = post.t || '';
+            document.getElementById('vpMeta').innerHTML = `Subido por: <strong style="color:#fff">${sec(post.by)}</strong> <span class="v-badge b-${post.lvl || 'miembro'}">${post.lvl || 'miembro'}</span>`;
+            
+            const v = document.getElementById('vpVideo');
+            if(v) v.src = post.v || '';
+            
+            if(_u) {
+                document.getElementById('vpCommentBox').style.display = 'flex';
+                document.getElementById('vpGuestMsg').style.display = 'none';
+            } else {
+                document.getElementById('vpCommentBox').style.display = 'none';
+                document.getElementById('vpGuestMsg').style.display = 'block';
+            }
+
+            const cSec = document.getElementById('vpComments');
+            if(cSec) cSec.innerHTML = '<div style="color:#555;font-size:12px;text-align:center;">Cargando opiniones...</div>';
+            
+            _commentListener = db.ref('posts/'+id+'/comments').orderByChild('ts').on('value', snap => {
+                if(!cSec) return;
+                cSec.innerHTML = '';
+                if(!snap.exists()) {
+                    cSec.innerHTML = '<div style="color:#555;font-size:12px;text-align:center;">Aún no hay chisme. Sé el primero.</div>';
+                    return;
+                }
+                snap.forEach(x => {
+                    let c = x.val();
+                    if(!c) return;
+                    let delBtn = '';
+                    if(_u && (['admin','owner','mod'].includes(_u.lvl) || _u.id === c.by)) {
+                        delBtn = `<span class="del-btn" style="cursor:pointer;" onclick="delComment('${id}', '${x.key}')">X</span>`;
+                    }
+                    cSec.innerHTML += `
+                        <div class="comment">
+                            <div class="c-head">
+                                <div><strong style="color:#fff">${sec(c.by)}</strong> <span class="v-badge b-${c.lvl || 'miembro'}">${c.lvl || 'miembro'}</span></div>
+                                ${delBtn}
+                            </div>
+                            <div class="c-body">${sec(c.txt)}</div>
+                        </div>
+                    `;
+                });
+                cSec.scrollTop = cSec.scrollHeight;
+            });
+            openMod('mPost');
+        }
+
+        function sendComment() {
+            if(!_u || !_currentPostId) return;
+            const t = document.getElementById('cInput').value.trim();
+            if(!t) return;
+            const r = db.ref('posts/'+_currentPostId+'/comments').push();
+            r.set({ by: _u.id, lvl: _u.lvl, txt: t, ts: firebase.database.ServerValue.TIMESTAMP }, e => {
+                if(!e) document.getElementById('cInput').value = '';
+            });
+        }
+
+        function delComment(postId, commentId) {
+            if(confirm("¿Borrar este comentario?")) {
+                db.ref('posts/'+postId+'/comments/'+commentId).remove();
+            }
+        }
+
+        // FUNCIÓN DE SEGURIDAD CORREGIDA PARA PREVENIR ERRORES UNDEFINED
+        function sec(str) { 
+            if(str === null || str === undefined) return '';
+            return str.toString().replace(/[&<>'"]/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[x])); 
+        }
+        
+        window.onload = loadFeed;
+    </script>
+</body>
+</html>
