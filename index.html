@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WPDM - Archivo Clandestino</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <style>
@@ -24,14 +25,14 @@
         
         header { height: 50px; background: var(--nav-bg); border-bottom: 1px solid var(--brd); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 10; }
         .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .brand img { height: 32px; width: 32px; border-radius: 2px; object-fit: cover; }
+        .brand img { height: 35px; width: 35px; object-fit: contain; }
         .brand span { color: #fff; font-weight: bold; font-size: 18px; letter-spacing: 0.5px; text-transform: uppercase; }
         
         .search-wrap { flex: 1; max-width: 400px; margin: 0 20px; }
         .search-wrap input { width: 100%; background: #111; border: 1px solid var(--brd); padding: 6px 12px; color: #fff; outline: none; font-size: 13px; }
         .search-wrap input:focus { border-color: var(--txt-mut); }
         
-        .u-actions { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+        .u-actions { display: flex; align-items: center; gap: 10px; font-size: 13px; z-index: 20; }
         .btn { background: var(--red); color: #fff; border: 1px solid #880000; padding: 6px 12px; cursor: pointer; font-weight: bold; font-size: 12px; text-transform: uppercase; }
         .btn:hover { background: var(--red-hov); }
         .btn:disabled { background: #555; border-color: #333; cursor: not-allowed; }
@@ -46,92 +47,138 @@
         .cat-item:hover { background: #2a2a2a; color: #fff; }
         .cat-item.act { border-left: 3px solid var(--red); background: var(--card); color: #fff; }
 
+        .main-container { flex: 1; display: flex; flex-direction: row; overflow: hidden; }
         main { flex: 1; overflow-y: auto; padding: 20px; }
 
         .wpd-banner {
             background-color: #1a1a1a;
             background-image: linear-gradient(335deg, rgba(255,255,255,0.05) 25%, transparent 25%),
-                              linear-gradient(155deg, rgba(255,255,255,0.05) 25%, transparent 25%),
-                              linear-gradient(335deg, rgba(255,255,255,0.05) 25%, transparent 25%),
                               linear-gradient(155deg, rgba(255,255,255,0.05) 25%, transparent 25%);
             background-size: 20px 20px;
-            background-position: 0 0, 10px 10px, 10px 10px, 0 0;
             border: 2px solid var(--brd);
             margin-bottom: 20px;
             padding: 20px;
             text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
             box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
         }
         .wpd-banner h2 {
-            color: #ff8888;
             font-family: "Impact", sans-serif;
-            font-size: 32px;
-            letter-spacing: 2px;
+            font-size: 28px;
+            letter-spacing: 1px;
             text-shadow: 2px 2px 4px #000;
             margin: 5px 0;
-            -webkit-text-stroke: 1px #800000;
         }
+
+        /* DISEÑO DE DECORACIÓN AVANZADA LATERAL CON CONTADOR EN VIVO */
+        .side-decoration { width: 200px; border-left: 1px solid var(--brd); background: #141414; display: flex; flex-direction: column; align-items: center; padding: 20px 10px; overflow-y: auto; gap: 15px; }
+        .side-decoration img { width: 100%; max-width: 160px; border: 1px solid #3d3d3d; filter: grayscale(20%); }
+        .death-box { background: #000; border: 1px dashed var(--red); padding: 10px; width: 100%; text-align: center; font-family: monospace; }
+        .death-title { font-size: 10px; color: var(--txt-mut); text-transform: uppercase; letter-spacing: 1px; }
+        .deaths-today { font-size: 18px; color: #ff3333; font-weight: bold; margin-top: 4px; }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; }
         
-        .v-card { background: var(--card); border: 1px solid var(--brd); display: flex; flex-direction: column; cursor: pointer; transition: border 0.2s; }
+        .v-card { background: var(--card); border: 1px solid var(--brd); display: flex; flex-direction: column; cursor: pointer; transition: border 0.2s; position: relative; }
         .v-card:hover { border-color: var(--txt-mut); }
         .v-thumb { width: 100%; aspect-ratio: 16/9; background: #000; position: relative; border-bottom: 1px solid var(--brd); pointer-events: none; }
         .v-thumb video { width: 100%; height: 100%; object-fit: contain; }
+        
         .v-info { padding: 10px; display: flex; flex-direction: column; gap: 5px; }
         .v-title { font-size: 13px; font-weight: bold; color: #eee; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .v-meta { font-size: 11px; color: var(--txt-mut); display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }
+        .v-meta { font-size: 11px; color: var(--txt-mut); display: flex; justify-content: space-between; align-items: center; margin-top: 5px; gap: 4px; }
         
+        .v-vote-box { display: flex; align-items: center; gap: 12px; background: #161616; padding: 4px 8px; border-radius: 4px; border: 1px solid #252525; }
+        .vote-btn { width: 18px; height: 18px; cursor: pointer; object-fit: contain; transition: transform 0.1s; }
+        .vote-btn:hover { transform: scale(1.2); }
+        .vote-count { font-size: 12px; font-weight: bold; color: #fff; min-width: 14px; text-align: center; }
+        .vote-count.positive { color: #00ff00; }
+        .vote-count.negative { color: #ff3333; }
+
         .v-badge { padding: 2px 4px; font-size: 9px; color: #fff; font-weight: bold; text-transform: uppercase; border: 1px solid #444; border-radius: 2px; }
         .b-admin { background: #800000; border-color: #ff0000; }
         .b-mod { background: #004080; border-color: #0080ff; }
-        .b-owner { background: #806000; border-color: #ffc000; color: #fff; }
+        .b-owner { background: #806000; border-color: #ffc000; }
         .b-miembro { background: #333; border-color: #555; }
 
+        .pagination-container { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 25px; padding: 10px; }
+        .pagination-container input { width: 50px; background: #000; border: 1px solid var(--brd); padding: 5px; color: #fff; text-align: center; }
+
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: none; align-items: center; justify-content: center; }
-        .modal-c { background: var(--sb-bg); border: 1px solid var(--red); width: 400px; padding: 20px; box-shadow: 0 0 15px rgba(204,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-c { background: var(--sb-bg); border: 1px solid var(--red); width: 400px; padding: 20px; box-shadow: 0 0 15px rgba(204,0,0,0.2); max-height: 90vh; overflow-y: auto; z-index: 1010; }
         
         .modal-post { width: 800px; max-width: 95vw; display: flex; flex-direction: column; }
-        .modal-post h3 { color: #fff; font-size: 18px; border-bottom: none; margin-bottom: 10px; text-transform: none; }
-        .post-vid { width: 100%; background: #000; border: 1px solid var(--brd); max-height: 50vh; outline: none; margin-bottom: 10px; }
+        .modal-post h3 { color: #fff; font-size: 18px; margin-bottom: 10px; }
+        .post-vid { width: 100%; background: #000; border: 1px solid var(--brd); max-height: 50vh; margin-bottom: 10px; }
         
         .comment-section { background: #111; border: 1px solid var(--brd); padding: 10px; min-height: 100px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; max-height: 250px; overflow-y: auto; }
         .comment { border-bottom: 1px solid #222; padding-bottom: 8px; }
-        .comment:last-child { border-bottom: none; }
         .c-head { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
-        .c-body { font-size: 13px; color: #ddd; word-wrap: break-word; }
-        .c-input-area { display: flex; gap: 10px; }
-
-        .modal-c h3 { margin-bottom: 15px; color: var(--red); font-size: 16px; text-transform: uppercase; border-bottom: 1px solid var(--brd); padding-bottom: 5px; }
+        
         .grp { margin-bottom: 15px; }
         .grp label { display: block; font-size: 11px; color: var(--txt-mut); margin-bottom: 4px; text-transform: uppercase; }
         .grp input[type="text"], .grp input[type="password"], .grp select { width: 100%; background: #000; border: 1px solid var(--brd); padding: 8px; color: #fff; font-size: 13px; }
-        .grp input:focus, .grp select:focus { outline: none; border-color: var(--red); }
         .grp input[type="file"] { width: 100%; color: #fff; font-size: 12px; background: #111; padding: 8px; border: 1px dashed var(--brd); }
         
         .hidden { display: none !important; }
-        .del-btn { color: var(--txt-mut); background: none; border: none; cursor: pointer; font-size: 11px; font-weight: bold; }
-        .del-btn:hover { color: var(--red-hov); text-decoration: underline; }
+        .del-btn { color: var(--txt-mut); background: none; border: none; cursor: pointer; font-size: 11px; font-weight: bold; margin-left: auto; }
+        .del-btn:hover { color: var(--red-hov); }
 
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
         ::-webkit-scrollbar-thumb { background: #444; }
         ::-webkit-scrollbar-thumb:hover { background: var(--red); }
     </style>
+
+<style id="wpd_theme_override">
+:root{
+--bg:#0f1117!important;
+--sb-bg:#151823!important;
+--nav-bg:#1b1f2a!important;
+--card:#171b26!important;
+--brd:#2f3550!important;
+--red:#7c3aed!important;
+--red-hov:#8b5cf6!important;
+--txt:#d1d5db!important;
+}
+header{border-bottom:2px solid #7c3aed!important;}
+.btn{background:#7c3aed!important;border-color:#6d28d9!important;}
+.wpd-banner{
+background:linear-gradient(rgba(120,0,0,.65),rgba(120,0,0,.65)),
+repeating-linear-gradient(90deg,#300 0,#500 40px,#300 80px)!important;
+border:2px solid #7c3aed!important;
+}
+.v-card{border:1px solid #343b5c!important;border-radius:6px!important;}
+.v-card:hover{box-shadow:0 0 10px rgba(124,58,237,.45)!important;}
+.cat-item.act{background:#221a38!important;border-left:4px solid #8b5cf6!important;}
+.pagination-container,.side-decoration{background:#121520!important;}
+</style>
+
+
+<style id="wpd_image_style_fix">
+.grid{display:flex!important;flex-direction:column!important;gap:12px!important}
+.v-card{display:flex!important;flex-direction:row!important;min-height:130px!important;background:#171b26!important;border:1px solid #2f3550!important;border-radius:0!important}
+.v-thumb{width:150px!important;height:100px!important;aspect-ratio:auto!important;flex-shrink:0!important;margin:14px!important;border:1px solid #333!important}
+.v-info{padding:14px!important;flex:1!important}
+.v-title{font-size:14px!important}
+@media(max-width:700px){
+.v-card{min-height:110px!important}
+.v-thumb{width:100px!important;height:70px!important}
+}
+header{background:#151823!important}
+.btn{background:#7c3aed!important}
+.modal-c{border-color:#7c3aed!important}
+.comment-section{background:#0b0d12!important}
+</style>
 </head>
-<body>
+<body><div id="ageWarning" style="position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;"><div style="max-width:450px;background:#1e1e1e;border:2px solid #cc0000;padding:25px;text-align:center;color:white;"><h2 style="color:#ff4444">ADVERTENCIA +18</h2><p style="margin:15px 0;color:#ccc">Este sitio contiene contenido destinado únicamente para adultos. Debes tener la edad legal para continuar.</p><button class="btn" onclick="document.getElementById('ageWarning').style.display='none'">Tengo +18 años</button></div></div>
 
     <header>
-        <a href="#" class="brand">
+        <a href="#" class="brand" onclick="setCat('all')">
             <img src="marseydylan.webp" alt="WPDM">
             <span>WPDM</span>
         </a>
         <div class="search-wrap">
-            <input type="text" placeholder="Buscar desmadre...">
+            <input type="text" id="siteSearch" placeholder="Buscar desmadre..." oninput="renderFeed()">
         </div>
         <div class="u-actions" id="authZone">
             <button class="btn btn-ghost" onclick="openMod('mAuth')">Entrar</button>
@@ -148,22 +195,40 @@
     <div class="layout">
         <aside>
             <ul class="cat-list">
-                <li class="cat-item act" onclick="setCat('all', this)">Todo el desmadre</li>
-                <li class="cat-item" onclick="setCat('accidents', this)">Accidentes pesados</li>
-                <li class="cat-item" onclick="setCat('cartel', this)">Narcos / Militares</li>
-                <li class="cat-item" onclick="setCat('fights', this)">Tiros / Peleas</li>
-                <li class="cat-item" onclick="setCat('cctv', this)">Cámaras (CCTV)</li>
+                <li class="cat-item act" id="cat-all" onclick="setCat('all', this)">Todo el desmadre</li>
+                <li class="cat-item" id="cat-accidents" onclick="setCat('accidents', this)">Accidentes pesados</li>
+                <li class="cat-item" id="cat-cartel" onclick="setCat('cartel', this)">Narcos / Militares</li>
+                <li class="cat-item" id="cat-fights" onclick="setCat('fights', this)">Tiros / Peleas</li>
+                <li class="cat-item" id="cat-suicide" onclick="setCat('suicide', this)">/h/ suicide</li>
+                <li class="cat-item" id="cat-cctv" onclick="setCat('cctv', this)">Cámaras (CCTV)</li>
             </ul>
         </aside>
 
-        <main>
-            <div class="wpd-banner">
-                <h2>YOU'RE VIEWING A CACHED VERSION</h2>
-                <h2 style="color: #fff;">LOGIN OR SIGN UP FOR LIVE VIEWING</h2>
-            </div>
+        <div class="main-container">
+            <main>
+                <div class="wpd-banner" id="topBanner">
+                    <h2 id="bannerMainTxt" style="color: #ff8888;">YOU'RE VIEWING A CACHED VERSION</h2>
+                    <h2 id="bannerSubTxt" style="color: #fff;">LOGIN OR SIGN UP FOR LIVE VIEWING</h2>
+                </div>
 
-            <div class="grid" id="feed"></div>
-        </main>
+                <div class="grid" id="feed"></div>
+
+                <div class="pagination-container">
+                    <button class="btn btn-ghost" onclick="changePage(-1)">« Prev</button>
+                    <input type="text" id="page_number" value="1" readonly>
+                    <button class="btn btn-ghost" onclick="changePage(1)">Sig »</button>
+                </div>
+            </main>
+
+            <div class="side-decoration hidden" id="hDecoration">
+                <div class="death-box">
+                    <div class="death-title">Muertes Hoy Mundialmente</div>
+                    <div class="deaths-today" id="liveCounter">0</div>
+                </div>
+                <img src="17088196137933624.webp" alt="Decoración Especial 1">
+                <img src="1777337172tlcgT4bZCmycvw.webp" alt="Decoración Especial 2">
+            </div>
+        </div>
     </div>
 
     <div class="modal" id="mAuth">
@@ -171,7 +236,8 @@
             <h3>Caile a tu cuenta</h3>
             <div class="grp"><label>Usuario</label><input type="text" id="lU" autocomplete="off"></div>
             <div class="grp"><label>Contraseña</label><input type="password" id="lP"></div>
-            <button class="btn" style="width:100%" onclick="doLog(0)">Sobres (Entrar)</button>
+            <button class="btn" style="width:100%" onclick="doLog(0)">Sobres (Entrar con correo)</button>
+            <button class="btn btn-ghost" style="width:100%; margin-top:10px" onclick="loginGoogle()">Entrar con Google</button>
             <button class="btn btn-ghost" style="width:100%; margin-top:10px" onclick="closeMod()">Al rato</button>
         </div>
     </div>
@@ -181,7 +247,8 @@
             <h3>Saca tu cuenta</h3>
             <div class="grp"><label>¿Cómo te vas a llamar?</label><input type="text" id="rU" autocomplete="off"></div>
             <div class="grp"><label>Contraseña</label><input type="password" id="rP"></div>
-            <button class="btn" style="width:100%" onclick="doLog(1)">Registrarse</button>
+            <button class="btn" style="width:100%" onclick="doLog(1)">Registrarse con correo</button>
+            <button class="btn btn-ghost" style="width:100%; margin-top:10px" onclick="registerGoogle()">Registrarse con Google</button>
             <button class="btn btn-ghost" style="width:100%; margin-top:10px" onclick="closeMod()">Al rato</button>
         </div>
     </div>
@@ -196,6 +263,7 @@
                     <option value="accidents">Accidentes pesados</option>
                     <option value="cartel">Narcos / Militares</option>
                     <option value="fights">Tiros / Peleas</option>
+                    <option value="suicide">/h/ suicide</option>
                     <option value="cctv">Cámaras (CCTV)</option>
                 </select>
             </div>
@@ -248,7 +316,6 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN OFICIAL DE TU PROYECTO
         const _f = {
             apiKey: "AIzaSyCYQSsnI_O2K09R6l28EH_qfapPyvoLH_A",
             authDomain: "wpdm-da948.firebaseapp.com",
@@ -262,21 +329,31 @@
         firebase.initializeApp(_f);
         const db = firebase.database();
         const storage = firebase.storage();
+        const auth = firebase.auth();
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+        googleProvider.setCustomParameters({prompt:'select_account'});
         
         let _u = null;
         let _c = 'all';
         let _currentPostId = null;
         let _postsCache = {}; 
         let _commentListener = null;
+        let _currentPage = 1;
+        const _itemsPerPage = 12;
+
+        // CODIGO DINÁMICO INTEGRADOR DE LÓGICA DEATHS_TODAY.JS
+        const dt = new Date();
+        let death_counter = parseInt(dt.getSeconds() + (60 * dt.getMinutes()) + (60 * 60 * dt.getHours()) * 1.93);
+
+        function update_death_counter() {
+            death_counter += 1;
+            const el = document.getElementById('liveCounter');
+            if(el) el.innerHTML = death_counter.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        setInterval(update_death_counter, 518);
 
         function openMod(id) {
-            document.querySelectorAll('.modal').forEach(m => {
-                m.style.display = 'none';
-                if(m.id === 'mPost') {
-                    const v = document.getElementById('vpVideo');
-                    if(v) v.pause();
-                }
-            });
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
             const target = document.getElementById(id);
             if(target) target.style.display = 'flex';
         }
@@ -295,44 +372,82 @@
         function doLog(isReg) {
             const u = document.getElementById(isReg ? 'rU' : 'lU').value.trim();
             const p = document.getElementById(isReg ? 'rP' : 'lP').value.trim();
-            if(!u || !p) return;
 
-            db.ref('usrs/'+u).once('value', s => {
-                if(isReg) {
-                    if(s.exists()) return alert("Ese nombre ya lo agarraron, wey.");
-                    db.ref('usrs').once('value', s2 => {
-                        let r = s2.exists() ? 'miembro' : 'owner';
-                        db.ref('usrs/'+u).set({ u:u, p:btoa(p), r:r }, e => {
-                            if(!e) initSess(u, r);
-                        });
+            if(!u || !p) return alert("Rellena todos los campos.");
+
+            const email = u.includes("@") ? u : u + "@wpdm.local";
+
+            if(isReg) {
+                auth.createUserWithEmailAndPassword(email, p)
+                .then(res => {
+                    const user = res.user;
+                    db.ref('usrs/'+user.uid).set({
+                        u: u,
+                        email: user.email,
+                        r: 'miembro'
                     });
-                } else {
-                    if(s.exists() && atob(s.val().p) === p) initSess(u, s.val().r);
-                    else alert("Nel, contraseña o usuario equivocados.");
-                }
+                    initSess(user);
+                })
+                .catch(e => alert(e.message));
+            } else {
+                auth.signInWithEmailAndPassword(email, p)
+                .then(res => initSess(res.user))
+                .catch(e => alert(e.message));
+            }
+        }
+
+        function loginGoogle() {
+            auth.signInWithPopup(googleProvider)
+            .then(res => {
+                const user = res.user;
+                db.ref('usrs/'+user.uid).update({
+                    u: user.displayName || user.email,
+                    email: user.email,
+                    r: 'miembro'
+                });
+                initSess(user);
+            })
+            .catch(e => alert(e.message));
+        }
+
+        function registerGoogle() {
+            auth.signInWithPopup(googleProvider)
+            .then(res => {
+                const user = res.user;
+                db.ref('usrs/'+user.uid).set({
+                    u: user.displayName || user.email,
+                    email: user.email,
+                    r: 'miembro',
+                    created: Date.now()
+                });
+                initSess(user);
+            })
+            .catch(e => alert(e.message));
+        }
+
+        function initSess(user) {
+            db.ref('usrs/'+user.uid).once('value').then(s=>{
+            const data=s.val() || {};
+            _u = { id:user.uid, lvl:data.r || 'miembro', name:data.u || user.displayName || user.email };
+            document.getElementById('authZone').classList.add('hidden');
+            document.getElementById('usrZone').classList.remove('hidden');
+            document.getElementById('uName').innerText = _u.name;
+            updateBanners();
+            renderFeed();
+            closeMod();
             });
         }
 
-        function initSess(u, r) {
-            _u = { id: u, lvl: r };
-            document.getElementById('authZone').classList.add('hidden');
-            document.getElementById('usrZone').classList.remove('hidden');
-            document.getElementById('uName').innerText = u;
-            if(['admin','owner'].includes(r)) document.getElementById('btnAdm').classList.remove('hidden');
-            else document.getElementById('btnAdm').classList.add('hidden');
-            closeMod();
-            renderFeed();
-        }
+        auth.onAuthStateChanged(user => {
+            if(user) initSess(user);
+        });
 
         function logOut() {
+            auth.signOut();
             _u = null;
             document.getElementById('authZone').classList.remove('hidden');
             document.getElementById('usrZone').classList.add('hidden');
-            document.getElementById('btnAdm').classList.add('hidden');
-            ['lU','lP','rU','rP'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.value = '';
-            });
+            updateBanners();
             renderFeed();
         }
 
@@ -341,81 +456,123 @@
             const t = document.getElementById('uT').value.trim();
             const c = document.getElementById('uCat').value;
             const btn = document.getElementById('btnSubir');
-            const fileInput = document.getElementById('uFile');
-            const file = fileInput ? fileInput.files[0] : null;
+            const file = document.getElementById('uFile').files[0];
             
-            if(!t || !file) return alert("Llena el título y escoge un video, no la cagues.");
-
-            btn.innerText = "Subiendo... aguanta";
+            if(!t || !file) return alert("Introduce título y video.");
+            btn.innerText = "Subiendo archivo...";
             btn.disabled = true;
 
             const storageRef = storage.ref('videos/' + Date.now() + '_' + file.name);
             const uploadTask = storageRef.put(file);
 
-            uploadTask.on('state_changed', null, (err) => {
-                alert("Pedos al subir el video.");
+            uploadTask.on('state_changed', (snap) => {
+                const p = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+                btn.innerText = "Subiendo " + p + "%";
+            }, (err) => {
+                alert("Error al subir video: " + err.message);
                 btn.innerText = "Subir Video";
                 btn.disabled = false;
             }, () => {
                 uploadTask.snapshot.ref.getDownloadURL().then((url) => {
                     const r = db.ref('posts').push();
                     r.set({
-                        id: r.key, t: t, v: url, c: c,
-                        by: _u.id, lvl: _u.lvl, ts: firebase.database.ServerValue.TIMESTAMP
+                        id: r.key, t: t, v: url, c: c, by: _u.id, lvl: _u.lvl,
+                        score: 0, ts: firebase.database.ServerValue.TIMESTAMP
                     }, e => {
-                        if(!e) {
-                            document.getElementById('uT').value = '';
-                            document.getElementById('uFile').value = '';
-                            closeMod();
-                        }
                         btn.innerText = "Subir Video";
                         btn.disabled = false;
+                        if(!e) closeMod();
                     });
                 });
             });
         }
 
-        function delVid(id) {
-            if(window.event) window.event.stopPropagation();
-            if(_u && ['admin','owner','mod'].includes(_u.lvl)) {
-                if(confirm('¿Seguro que quieres darle aire a este video con todo y comentarios?')) {
-                    db.ref('posts/'+id).remove();
+        function handleVote(postId, type, event) {
+            if(event) event.stopPropagation();
+            if(!_u) return alert("Inicia sesión o regístrate para votar.");
+
+            const postRef = db.ref('posts/' + postId);
+            postRef.child('votes/' + _u.id).once('value', snap => {
+                const currentVote = snap.val();
+                let scoreDelta = 0;
+
+                if (currentVote === type) {
+                    postRef.child('votes/' + _u.id).remove();
+                    scoreDelta = (type === 'up') ? -1 : 1;
+                } else {
+                    postRef.child('votes/' + _u.id).set(type);
+                    if (!currentVote) scoreDelta = (type === 'up') ? 1 : -1;
+                    else scoreDelta = (type === 'up') ? 2 : -2;
                 }
-            }
+                postRef.child('score').transaction(currentScore => (currentScore || 0) + scoreDelta);
+            });
         }
 
-        function setRole() {
-            if(!_u || !['admin','owner'].includes(_u.lvl)) return;
-            const t = document.getElementById('aU').value.trim();
-            const r = document.getElementById('aR').value;
-            if(!t) return;
-
-            db.ref('usrs/'+t).once('value', s => {
-                if(!s.exists()) return alert("No topamos a ese wey aquí.");
-                if(s.val().r === 'owner') return alert("A este wey no lo puedes tocar.");
-                db.ref('usrs/'+t+'/r').set(r, e => {
-                    if(!e) { alert("Listo."); closeMod(); }
-                });
-            });
+        function delVid(id, event) {
+            if(event) event.stopPropagation();
+            if(confirm('¿Borrar este contenido permanentemente?')) db.ref('posts/'+id).remove();
         }
 
         function setCat(cat, el) {
             _c = cat;
+            _currentPage = 1;
+            document.getElementById('page_number').value = 1;
             document.querySelectorAll('.cat-item').forEach(i => i.classList.remove('act'));
             if(el) el.classList.add('act');
+            else {
+                const target = document.getElementById('cat-' + cat);
+                if(target) target.classList.add('act');
+            }
+            updateBanners();
+            renderFeed();
+        }
+
+        function updateBanners() {
+            const banner = document.getElementById('topBanner');
+            const mainTxt = document.getElementById('bannerMainTxt');
+            const subTxt = document.getElementById('bannerSubTxt');
+            const decoration = document.getElementById('hDecoration');
+
+            if(_c === 'suicide') {
+                decoration.classList.remove('hidden');
+                banner.style.border = "2px solid #800000";
+                if(!_u) {
+                    mainTxt.innerText = "YOU'RE VIEWING A CACHED VERSION OF /h/SUICIDE";
+                    mainTxt.style.color = "#ff4444";
+                    subTxt.innerText = "REGISTER OR LOGIN TO BROWSE LIVE GRAPHIC FEEDS";
+                } else {
+                    mainTxt.innerText = "BIENVENIDO AL DIRECTORIO /h/SUICIDE";
+                    mainTxt.style.color = "#ff4444";
+                    subTxt.innerText = "Visualizando base de datos central en vivo.";
+                }
+            } else {
+                decoration.classList.add('hidden');
+                banner.style.border = "2px solid var(--brd)";
+                if(!_u) {
+                    mainTxt.innerText = "YOU'RE VIEWING A CACHED VERSION";
+                    mainTxt.style.color = "#ff8888";
+                    subTxt.innerText = "LOGIN OR SIGN UP FOR LIVE VIEWING";
+                } else {
+                    mainTxt.innerText = "PORTAL CENTRAL CONECTADO";
+                    mainTxt.style.color = "#55ff55";
+                    subTxt.innerText = "Explorando todo el archivo desclasificado.";
+                }
+            }
+        }
+
+        function changePage(delta) {
+            let targetPage = _currentPage + delta;
+            if(targetPage < 1) return;
+            _currentPage = targetPage;
+            document.getElementById('page_number').value = _currentPage;
             renderFeed();
         }
 
         function loadFeed() {
             db.ref('posts').orderByChild('ts').on('value', snap => {
                 _postsCache = {};
-                if(snap.exists()) {
-                    snap.forEach(x => { _postsCache[x.key] = x.val(); });
-                }
+                if(snap.exists()) snap.forEach(x => { _postsCache[x.key] = x.val(); });
                 renderFeed();
-            }, (error) => {
-                console.error("Error cargando posts:", error);
-                renderFeed(); 
             });
         }
 
@@ -424,20 +581,25 @@
             if(!fd) return;
             fd.innerHTML = '';
             
+            const q = document.getElementById('siteSearch').value.toLowerCase().trim();
             let arr = Object.values(_postsCache).filter(d => d && (_c === 'all' || d.c === _c));
+            
+            if(q) arr = arr.filter(d => d.t.toLowerCase().includes(q) || d.by.toLowerCase().includes(q));
             arr.reverse();
 
-            if(arr.length === 0) {
-                fd.innerHTML = '<div style="color:#555; padding:20px; text-align:center; grid-column: 1/-1;">Aún no hay videos. ¡Saca una cuenta y sube el primero!</div>';
+            const startIdx = (_currentPage - 1) * _itemsPerPage;
+            const paginatedArr = arr.slice(startIdx, startIdx + _itemsPerPage);
+
+            if(paginatedArr.length === 0) {
+                fd.innerHTML = '<div style="color:#555; padding:20px; text-align:center; grid-column:1/-1;">Fin de la lista de archivos.</div>';
                 return;
             }
 
-            arr.forEach(i => {
-                if(!i) return;
-                let btn = '';
-                if(_u && ['admin','owner','mod'].includes(_u.lvl)) {
-                    btn = `<button class="del-btn" onclick="delVid('${i.id}')">[BORRAR POST]</button>`;
-                }
+            paginatedArr.forEach(i => {
+                let adminBtn = (_u && ['admin','owner','mod'].includes(_u.lvl)) ? `<button class="del-btn" onclick="delVid('${i.id}', event)">[BORRAR]</button>` : '';
+                let score = i.score || 0;
+                let scoreClass = score > 0 ? 'positive' : (score < 0 ? 'negative' : '');
+
                 fd.innerHTML += `
                     <div class="v-card" onclick="openPost('${i.id}')">
                         <div class="v-thumb">
@@ -446,12 +608,16 @@
                         <div class="v-info">
                             <div class="v-title">${sec(i.t)}</div>
                             <div class="v-meta">
-                                <div style="display:flex;align-items:center;gap:6px">
+                                <div style="display:flex;align-items:center;gap:4px">
                                     <span style="color:#bbb">${sec(i.by)}</span>
                                     <span class="v-badge b-${i.lvl || 'miembro'}">${i.lvl || 'miembro'}</span>
                                 </div>
-                                <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 10px;">Ver post</button>
-                                ${btn}
+                                <div class="v-vote-box">
+                                    <img src="upvote.webp" class="vote-btn" onclick="handleVote('${i.id}', 'up', event)">
+                                    <span class="vote-count ${scoreClass}">${score}</span>
+                                    <img src="downvote.webp" class="vote-btn" onclick="handleVote('${i.id}', 'down', event)">
+                                </div>
+                                ${adminBtn}
                             </div>
                         </div>
                     </div>
@@ -478,60 +644,38 @@
             }
 
             const cSec = document.getElementById('vpComments');
-            if(cSec) cSec.innerHTML = '<div style="color:#555;font-size:12px;text-align:center;">Cargando opiniones...</div>';
-            
-            _commentListener = db.ref('posts/'+id+'/comments').orderByChild('ts').on('value', snap => {
-                if(!cSec) return;
+            _commentListener = db.ref('posts/'+id+'/comments').on('value', snap => {
                 cSec.innerHTML = '';
-                if(!snap.exists()) {
-                    cSec.innerHTML = '<div style="color:#555;font-size:12px;text-align:center;">Aún no hay chisme. Sé el primero.</div>';
-                    return;
-                }
-                snap.forEach(x => {
+                if(!snap.exists()) { cSec.innerHTML = '<div style="color:#555;font-size:12px;text-align:center;">Sin comentarios.</div>'; return; }
+                let comments=[];
+                snap.forEach(x => { comments.push(x); });
+                comments.reverse().forEach(x => {
                     let c = x.val();
-                    if(!c) return;
-                    let delBtn = '';
-                    if(_u && (['admin','owner','mod'].includes(_u.lvl) || _u.id === c.by)) {
-                        delBtn = `<span class="del-btn" style="cursor:pointer;" onclick="delComment('${id}', '${x.key}')">X</span>`;
-                    }
                     cSec.innerHTML += `
                         <div class="comment">
-                            <div class="c-head">
-                                <div><strong style="color:#fff">${sec(c.by)}</strong> <span class="v-badge b-${c.lvl || 'miembro'}">${c.lvl || 'miembro'}</span></div>
-                                ${delBtn}
-                            </div>
-                            <div class="c-body">${sec(c.txt)}</div>
+                            <div class="c-head"><strong>@${sec(c.by)}</strong><span class="v-badge b-${c.lvl || 'miembro'}">${c.lvl || 'miembro'}</span></div>
+                            <div style="font-size:13px;color:#ddd;">${sec(c.txt)}</div>
                         </div>
                     `;
                 });
-                cSec.scrollTop = cSec.scrollHeight;
             });
             openMod('mPost');
         }
 
         function sendComment() {
-            if(!_u || !_currentPostId) return;
             const t = document.getElementById('cInput').value.trim();
-            if(!t) return;
-            const r = db.ref('posts/'+_currentPostId+'/comments').push();
-            r.set({ by: _u.id, lvl: _u.lvl, txt: t, ts: firebase.database.ServerValue.TIMESTAMP }, e => {
-                if(!e) document.getElementById('cInput').value = '';
+            if(!t || !_u) return;
+            db.ref('posts/'+_currentPostId+'/comments').push().set({ by: _u.id, lvl: _u.lvl, txt: t }, () => {
+                document.getElementById('cInput').value = '';
             });
         }
 
-        function delComment(postId, commentId) {
-            if(confirm("¿Borrar este comentario?")) {
-                db.ref('posts/'+postId+'/comments/'+commentId).remove();
-            }
-        }
-
-        // FUNCIÓN DE SEGURIDAD CORREGIDA PARA PREVENIR ERRORES UNDEFINED
         function sec(str) { 
-            if(str === null || str === undefined) return '';
+            if(!str) return '';
             return str.toString().replace(/[&<>'"]/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[x])); 
         }
         
-        window.onload = loadFeed;
+        window.onload = () => { loadFeed(); updateBanners(); update_death_counter(); };
     </script>
 </body>
 </html>
